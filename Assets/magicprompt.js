@@ -300,9 +300,8 @@ if (!window.MP) {
  * Handles the enhance prompt button click
  * Takes the current prompt text and enhances it using the LLM
  */
-
 async function handleEnhancePrompt() {
-  
+  const currentImage = document.querySelector('#current_image img.current-image-img');
   const promptTextArea = document.getElementById("alt_prompt_textbox");
 
   if (window.isEnhancing) return;
@@ -311,7 +310,24 @@ async function handleEnhancePrompt() {
     window.isEnhancing = true;
     // Show loading animation
     if (loadingAnimation) loadingAnimation.classList.add("active");
-    let input = promptTextArea.value.trim();
+
+    let base64Data = null;
+    if (currentImage?.src) {
+        // Fetch the image data and convert to base64
+        const fetchResponse = await fetch(currentImage.src);
+        const blob = await fetchResponse.blob();
+        // Convert blob to base64
+        const reader = new FileReader();
+        base64Data = await new Promise((resolve) => {
+            reader.onloadend = () => {
+                // Get just the base64 data without the data URL prefix
+                resolve(reader.result.split(',')[1]);
+            };
+            reader.readAsDataURL(blob);
+        });
+     } 
+
+     let input = promptTextArea.value.trim();
      if(!input) {
         // Create a random prompt if the input is empty
         const inputPayload = MP.RequestBuilder.createRequestPayload(
@@ -328,7 +344,7 @@ async function handleEnhancePrompt() {
     }
     const payload = MP.RequestBuilder.createRequestPayload(
       input,
-      null,
+      base64Data,
       'enhance-prompt'
     );
     const response = await MP.APIClient.makeRequest(payload);
